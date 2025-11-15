@@ -52,11 +52,11 @@ type Data = { [string]: any }
 	@error string -- Throws an error if any step is malformed.
 ]=]
 local function validate(steps: { Types.MigrationStep })
-	assert(typeof(steps) == "table", "steps must be a table")
+	assert(typeof(steps) == 'table', 'steps must be a table')
 	for _, step in steps do
-		assert(typeof(step) == "table", "step must be a table")
-		assert(typeof(step.name) == "string", "step.name must be a string")
-		assert(typeof(step.apply) == "function", "step.apply must be a function")
+		assert(typeof(step) == 'table', 'step must be a table')
+		assert(typeof(step.name) == 'string', 'step.name must be a string')
+		assert(typeof(step.apply) == 'function', 'step.apply must be a function')
 	end
 end
 
@@ -155,7 +155,7 @@ local function apply(params: ApplyParams): Promise.TPromise<ApplyResult>
 		for _, step in params.steps do
 			-- Idempotency Check: Only apply if the step name is not in the applied set.
 			if not appliedSet[step.name] then
-				logger:log("trace", "applying migration step", { stepName = step.name })
+				logger:log('trace', 'applying migration step', { stepName = step.name })
 
 				-- Deep copy the data before applying the step to avoid modifying the original
 				-- `currentData` reference in case of an error within `step.apply`.
@@ -166,7 +166,7 @@ local function apply(params: ApplyParams): Promise.TPromise<ApplyResult>
 
 				if not ok then
 					-- If pcall failed, log the error and reject the promise.
-					logger:log("error", "failed to apply migration step", { stepName = step.name, error = result })
+					logger:log('error', 'failed to apply migration step', { stepName = step.name, error = result })
 					return reject(`Failed migration step '{step.name}': {result}`)
 				end
 

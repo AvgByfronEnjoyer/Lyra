@@ -29,7 +29,7 @@
 	@class PlayerStore
 ]=]
 
-local Players = game:GetService("Players")
+local Players = game:GetService('Players')
 
 local Log = require(script.Parent.Log)
 local Promise = require(script.Parent.Promise)
@@ -114,6 +114,7 @@ type PlayerStoreProps<T> = {
 type PlayerStoreConfig<T> = {
 	name: string,
 	template: T,
+	useDSSLocking: boolean?,
 	schema: (value: any) -> (boolean, string?),
 	migrationSteps: { Types.MigrationStep }?,
 	importLegacyData: ((key: string) -> any?)?,
@@ -168,12 +169,13 @@ local function createPlayerStore<T>(config: PlayerStoreConfig<T>): PlayerStore<T
 		name = config.name,
 		template = config.template,
 		schema = config.schema,
+		useDSSLocking = config.useDSSLocking,
 		migrationSteps = config.migrationSteps,
 		importLegacyData = config.importLegacyData,
 		changedCallbacks = config.changedCallbacks,
 		logCallback = config.logCallback,
 		onLockLost = function(key: string)
-			self:_kickPlayer(key, "DataStore lock lost, please rejoin the game.")
+			self:_kickPlayer(key, 'DataStore lock lost, please rejoin the game.')
 		end,
 		memoryStoreService = config.memoryStoreService,
 		dataStoreService = config.dataStoreService,
@@ -191,7 +193,7 @@ end
 	@private
 ]=]
 function PlayerStore:_kickPlayer(keyOrPlayer: string | Player, message: string): ()
-	if typeof(keyOrPlayer) ~= "string" then
+	if typeof(keyOrPlayer) ~= 'string' then
 		keyOrPlayer:Kick(message)
 	else
 		local player = Players:GetPlayerByUserId(tonumber(keyOrPlayer))
@@ -251,7 +253,7 @@ end
 function PlayerStore:load(player: Player)
 	local userIdKey = getUserIdKey(player)
 	return self._store:load(userIdKey, { player.UserId }):catch(function(e)
-		self:_kickPlayer(player, "DataStore load failed, please rejoin the game.")
+		self:_kickPlayer(player, 'DataStore load failed, please rejoin the game.')
 		return Promise.reject(e)
 	end)
 end

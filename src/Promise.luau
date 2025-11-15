@@ -1,6 +1,6 @@
-local Promise = require(script.Parent.Parent.Promise)
+local Promise = require(script.Parent.roblox_packages.Promise)
 
-export type Status = "Started" | "Resolved" | "Rejected" | "Cancelled"
+export type Status = 'Started' | 'Resolved' | 'Rejected' | 'Cancelled'
 
 export type Promise = {
 	andThen: (
@@ -59,16 +59,16 @@ type SignalConnection = {
 	[any]: any,
 }
 
-export type ErrorKind = "ExecutionError" | "AlreadyCancelled" | "NotResolvedInTime" | "TimedOut"
+export type ErrorKind = 'ExecutionError' | 'AlreadyCancelled' | 'NotResolvedInTime' | 'TimedOut'
 
 type Error = {
 	is: (anything: any) -> boolean,
 	isKind: (anything: any, kind: ErrorKind) -> boolean,
 	Kind: {
-		ExecutionError: "ExecutionError",
-		AlreadyCancelled: "AlreadyCancelled",
-		NotResolvedInTime: "NotResolvedInTime",
-		TimedOut: "TimedOut",
+		ExecutionError: 'ExecutionError',
+		AlreadyCancelled: 'AlreadyCancelled',
+		NotResolvedInTime: 'NotResolvedInTime',
+		TimedOut: 'TimedOut',
 	},
 }
 

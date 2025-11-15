@@ -13,8 +13,8 @@ local function resultHandler(co: thread, ok: boolean, ...)
 		error(debug.traceback(co, message), 2)
 	end
 
-	if coroutine.status(co) ~= "dead" then
-		error(debug.traceback(co, "attempt to yield"), 2)
+	if coroutine.status(co) ~= 'dead' then
+		error(debug.traceback(co, 'attempt to yield'), 2)
 	end
 
 	return ...

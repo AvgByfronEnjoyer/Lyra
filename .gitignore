@@ -1,23 +1,7 @@
-# Roblox Studio lock files
-/*.rbxlx.lock
-/*.rbxl.lock
+/luau_packages
+/lune_packages
+/roblox_packages
 
-/*.rbxlx
-/*.rbxl
-
-Lyra.rbxm
-
-Packages
-DevPackages
+pesde.lock
 
 sourcemap.json
-
-.env
-
-external
-.aider*
-
-node_modules
-
-# Moonwave build output
-/build

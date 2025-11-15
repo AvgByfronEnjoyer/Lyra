@@ -134,7 +134,7 @@ function PromiseQueue:add(callback: () -> ()): Promise.Promise
 		}
 		table.insert(self._queue, record)
 
-		self._logger:log("trace", "added item to queue", self:_getLogContext())
+		self._logger:log('trace', 'added item to queue', self:_getLogContext())
 
 		-- Handle cancellation: if the returned promise is cancelled before processing,
 		-- remove the item from the queue.
@@ -142,7 +142,7 @@ function PromiseQueue:add(callback: () -> ()): Promise.Promise
 			local idx = table.find(self._queue, record)
 			if idx then
 				table.remove(self._queue, idx)
-				self._logger:log("trace", "removed cancelled item from queue", self:_getLogContext(record))
+				self._logger:log('trace', 'removed cancelled item from queue', self:_getLogContext(record))
 			end
 		end)
 
@@ -162,7 +162,7 @@ end
 	@private
 ]=]
 function PromiseQueue:_processQueue()
-	self._logger:log("trace", "processing queue", self:_getLogContext())
+	self._logger:log('trace', 'processing queue', self:_getLogContext())
 	-- Loop continues as long as items exist in the queue.
 	while #self._queue > 0 do
 		local item = self._queue[1] -- Get the next item from the front.
@@ -172,10 +172,10 @@ function PromiseQueue:_processQueue()
 		local deadlockWarn = task.delay(60, function()
 			local ctx = self:_getLogContext(item)
 			ctx.trace = item.trace -- Include original call stack in warning.
-			self._logger:log("warn", "queue item taking > 60s", ctx)
+			self._logger:log('warn', 'queue item taking > 60s', ctx)
 		end)
 
-		self._logger:log("trace", "processing queue item", self:_getLogContext(item))
+		self._logger:log('trace', 'processing queue item', self:_getLogContext(item))
 		-- Execute the item's function within a Promise context.
 		Promise
 			.try(item.fn)
@@ -190,11 +190,11 @@ function PromiseQueue:_processQueue()
 
 					local msg
 					if Promise.Error.isKind(e, Promise.Error.Kind.TimedOut) then
-						msg = "queue item timed out"
+						msg = 'queue item timed out'
 					else
-						msg = "queue item failed"
+						msg = 'queue item failed'
 					end
-					self._logger:log("debug", msg, ctx)
+					self._logger:log('debug', msg, ctx)
 
 					-- Reject the original promise with the error and traceback.
 					item.reject(`Queue item failed: {e}\nCreated at:\n{item.trace}`)
@@ -202,7 +202,7 @@ function PromiseQueue:_processQueue()
 			)
 			:finally(function()
 				-- This runs regardless of success or failure.
-				self._logger:log("trace", "finished processing queue item", self:_getLogContext(item))
+				self._logger:log('trace', 'finished processing queue item', self:_getLogContext(item))
 
 				-- Remove the item *only if* it's still the first item.
 				-- This prevents issues if an item was cancelled and removed while processing.
@@ -215,7 +215,7 @@ function PromiseQueue:_processQueue()
 			end)
 			:await() -- Wait for the item's promise (including timeout/finally) to complete before the loop continues.
 	end
-	self._logger:log("trace", "finished processing queue", self:_getLogContext())
+	self._logger:log('trace', 'finished processing queue', self:_getLogContext())
 end
 
 --[=[

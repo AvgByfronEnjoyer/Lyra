@@ -43,7 +43,7 @@ export type ReadTxParams = {
 }
 
 -- We never want to read a cached value for a transaction marker.
-local getOptions = Instance.new("DataStoreGetOptions")
+local getOptions = Instance.new('DataStoreGetOptions')
 getOptions.UseCache = false
 
 --[=[

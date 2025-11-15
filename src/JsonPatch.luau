@@ -37,7 +37,7 @@ local Types = require(script.Parent.Types)
 -- JSON Pointer Utilities
 
 local function isArray(value: any): boolean
-	if typeof(value) ~= "table" then
+	if typeof(value) ~= 'table' then
 		return false
 	end
 
@@ -54,7 +54,7 @@ local function isArray(value: any): boolean
 	local count = 0
 	local sum = 0
 	for key in value do
-		if typeof(key) ~= "number" then
+		if typeof(key) ~= 'number' then
 			return false
 		end
 		if key % 1 ~= 0 or key < 1 then
@@ -70,29 +70,29 @@ end
 local function unescapeSegment(segment: string): string
 	-- ~1 -> '/'
 	-- ~0 -> '~'
-	local res = string.gsub(segment, "~1", "/")
-	res = string.gsub(res, "~0", "~")
+	local res = string.gsub(segment, '~1', '/')
+	res = string.gsub(res, '~0', '~')
 	return res
 end
 
 local function escapeSegment(segment: string): string
 	-- / -> '~1'
 	-- ~ -> '~0'
-	local res = string.gsub(segment, "~", "~0")
-	res = string.gsub(res, "/", "~1")
+	local res = string.gsub(segment, '~', '~0')
+	res = string.gsub(res, '/', '~1')
 	return res
 end
 
 local function parsePointer(pointer: string): { string }
 	-- An empty string "" means "root"
-	if pointer == "" then
+	if pointer == '' then
 		return {}
 	end
-	if string.sub(pointer, 1, 1) ~= "/" then
-		error("Invalid JSON pointer (must start with / or be empty)")
+	if string.sub(pointer, 1, 1) ~= '/' then
+		error('Invalid JSON pointer (must start with / or be empty)')
 	end
 	local raw = string.sub(pointer, 2) -- skip leading '/'
-	local segments = string.split(raw, "/")
+	local segments = string.split(raw, '/')
 	for i, seg in segments do
 		segments[i] = unescapeSegment(seg)
 	end
@@ -114,7 +114,7 @@ local function getArrayIndexOrError(key: string, length: number, op: string): nu
 end
 
 local function isStringifiedNumberOk(key: string): boolean
-	if key == "0" then
+	if key == '0' then
 		return true
 	end
 
@@ -129,12 +129,12 @@ end
 
 local function applyOperation(doc: any, opObj: Types.PatchOperation): any
 	local op = opObj.op
-	if typeof(op) ~= "string" then
+	if typeof(op) ~= 'string' then
 		error("'op' must be a string")
 	end
 
 	local path = opObj.path
-	if typeof(path) ~= "string" then
+	if typeof(path) ~= 'string' then
 		error("missing valid 'path' string")
 	end
 	local segments = parsePointer(path)
@@ -151,17 +151,17 @@ local function applyOperation(doc: any, opObj: Types.PatchOperation): any
 		end
 
 		if parent[seg] == nil then
-			error("add to a non-existent target")
+			error('add to a non-existent target')
 		end
 
-		if typeof(parent[seg]) ~= "table" then
+		if typeof(parent[seg]) ~= 'table' then
 			error("cannot 'add' into non-table parent")
 		end
 
 		parent = parent[seg]
 	end
 
-	if opObj.op == "add" then
+	if opObj.op == 'add' then
 		local value = opObj.value
 		if value == nil then
 			error("missing 'value' parameter")
@@ -186,11 +186,11 @@ local function applyOperation(doc: any, opObj: Types.PatchOperation): any
 		--
 		-- Otherwise, we treat it as an object.
 
-		local isAddingIntoEmptyArray = parentIsArray and #parent == 0 and key == "-"
-		local isAddingIntoPopulatedArray = parentIsArray and #parent > 0 and (tonumber(key) ~= nil or key == "-")
+		local isAddingIntoEmptyArray = parentIsArray and #parent == 0 and key == '-'
+		local isAddingIntoPopulatedArray = parentIsArray and #parent > 0 and (tonumber(key) ~= nil or key == '-')
 
 		if isAddingIntoEmptyArray or isAddingIntoPopulatedArray then
-			if key == "-" then
+			if key == '-' then
 				-- append
 				table.insert(parent, Tables.copyDeep(value))
 			else
@@ -203,14 +203,14 @@ local function applyOperation(doc: any, opObj: Types.PatchOperation): any
 			end
 		else
 			if parentIsArray and #parent > 0 then
-				error("Object operation on array target")
+				error('Object operation on array target')
 			end
 
 			parent[key] = Tables.copyDeep(value)
 		end
 
 		return doc
-	elseif opObj.op == "remove" then
+	elseif opObj.op == 'remove' then
 		-- If path is empty, remove entire doc => doc becomes nil
 		if #segments == 0 then
 			return nil
@@ -233,7 +233,7 @@ local function applyOperation(doc: any, opObj: Types.PatchOperation): any
 		end
 
 		return doc
-	elseif opObj.op == "replace" then
+	elseif opObj.op == 'replace' then
 		local value = opObj.value
 		if value == nil then
 			error("missing 'value' parameter")
@@ -310,30 +310,30 @@ local function generate(obj1: any, obj2: any, patches: { Types.PatchOperation },
 		if isKeyInObj and not isUndefinedInNonArray then
 			local newVal = obj2[key]
 
-			local bothAreTables = typeof(oldVal) == "table" and typeof(newVal) == "table"
+			local bothAreTables = typeof(oldVal) == 'table' and typeof(newVal) == 'table'
 			local sameArrayType = isArray(oldVal) == isArray(newVal)
 			local bothAreSameKindOfTable = bothAreTables and sameArrayType
 
 			if bothAreSameKindOfTable then
-				generate(oldVal, newVal, patches, path .. "/" .. getZeroBasedKey(key, obj1IsArray))
+				generate(oldVal, newVal, patches, path .. '/' .. getZeroBasedKey(key, obj1IsArray))
 			else
 				if oldVal ~= newVal then
 					table.insert(patches, {
-						op = "replace",
-						path = path .. "/" .. getZeroBasedKey(key, obj1IsArray),
+						op = 'replace',
+						path = path .. '/' .. getZeroBasedKey(key, obj1IsArray),
 						value = Tables.copyDeep(newVal),
 					})
 				end
 			end
 		elseif obj1IsArray == obj2IsArray then
 			table.insert(patches, {
-				op = "remove",
-				path = path .. "/" .. getZeroBasedKey(key, obj1IsArray),
+				op = 'remove',
+				path = path .. '/' .. getZeroBasedKey(key, obj1IsArray),
 			})
 			deleted = true
 		else
 			table.insert(patches, {
-				op = "replace",
+				op = 'replace',
 				path = path,
 				value = obj2,
 			})
@@ -352,8 +352,8 @@ local function generate(obj1: any, obj2: any, patches: { Types.PatchOperation },
 				local numericKey = tonumber(key)
 				if numericKey ~= nil and numericKey == obj1VirtualLength then
 					table.insert(patches, {
-						op = "add",
-						path = path .. "/-",
+						op = 'add',
+						path = path .. '/-',
 						value = Tables.copyDeep(obj2[key]),
 					})
 
@@ -362,8 +362,8 @@ local function generate(obj1: any, obj2: any, patches: { Types.PatchOperation },
 			end
 
 			table.insert(patches, {
-				op = "add",
-				path = path .. "/" .. getZeroBasedKey(key, obj2IsArray),
+				op = 'add',
+				path = path .. '/' .. getZeroBasedKey(key, obj2IsArray),
 				value = Tables.copyDeep(obj2[key]),
 			})
 		end
@@ -381,7 +381,7 @@ end
 
 function JSONPatch.createPatch(original: any, modified: any): { Types.PatchOperation }
 	local patches = {}
-	generate(original, modified, patches, "")
+	generate(original, modified, patches, '')
 	return patches
 end
 

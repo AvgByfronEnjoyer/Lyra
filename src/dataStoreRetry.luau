@@ -91,7 +91,7 @@ local function dataStoreRetry<T>(func: () -> T): Promise.TPromise<T>
 
 			-- Failure. Extract the error message and attempt to parse the error code.
 			local errorMessage = result[2]
-			local errorCode = errorMessage:match("^(%d+):") -- Match code at the beginning (e.g., "502: API Services...")
+			local errorCode = errorMessage:match('^(%d+):') -- Match code at the beginning (e.g., "502: API Services...")
 			errorCode = if errorCode then tonumber(errorCode) else nil
 
 			-- Check if the error code is in the list of retriable codes.

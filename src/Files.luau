@@ -25,7 +25,7 @@
 	index of the shard.
 ]=]
 
-local HttpService = game:GetService("HttpService")
+local HttpService = game:GetService('HttpService')
 
 local Types = require(script.Parent.Types)
 local Promise = require(script.Parent.Promise)
@@ -188,9 +188,9 @@ local function read(params: ReadParams): Promise.TPromise<any>
 
 	-- Step 2: Prepare to read shards.
 	local shardId = params.file.shard
-	assert(shardId, "Shard ID missing from large file object") -- Should be guaranteed by isLargeFile
+	assert(shardId, 'Shard ID missing from large file object') -- Should be guaranteed by isLargeFile
 	local shardCount = params.file.count
-	assert(shardCount, "Shard count missing from large file object")
+	assert(shardCount, 'Shard count missing from large file object')
 
 	local promises = {}
 
@@ -224,7 +224,7 @@ local function read(params: ReadParams): Promise.TPromise<any>
 		if not ok then
 			return Promise.reject(`Error decoding compressed file data (shardId: {shardId}): {compressedData}`) -- compressedData contains error msg here
 		end
-		if typeof(compressedData) ~= "buffer" then
+		if typeof(compressedData) ~= 'buffer' then
 			return Promise.reject(
 				`Expected buffer after first decode, got {typeof(compressedData)} (shardId: {shardId})`
 			)

@@ -1,4 +1,4 @@
-local HttpService = game:GetService("HttpService")
+local HttpService = game:GetService('HttpService')
 
 local Tables = require(script.Parent.Tables)
 
@@ -39,15 +39,15 @@ local function shouldSimulateError(service: any, requestType: string): (boolean,
 	end
 
 	if service._errorRates[requestType] and math.random() < service._errorRates[requestType] then
-		return true, "InternalError: random error simulation"
+		return true, 'InternalError: random error simulation'
 	end
 
 	if service._simulateThrottling then
-		return true, "Throttled: MemoryStore request was throttled, try again later"
+		return true, 'Throttled: MemoryStore request was throttled, try again later'
 	end
 
 	if service._simulateTimeout then
-		return true, "Timeout: MemoryStore request timed out"
+		return true, 'Timeout: MemoryStore request timed out'
 	end
 
 	return false, nil
@@ -70,17 +70,17 @@ local function doRateLimitAndQueue(service: any, requestType: string)
 	end
 
 	if #queue >= budget then
-		error("TotalRequestsOverLimit", 0)
+		error('TotalRequestsOverLimit', 0)
 	end
 
 	if #queue >= MAX_QUEUE_SIZE then
-		error("RequestThrottled", 0)
+		error('RequestThrottled', 0)
 	end
 
 	if service._forcedThrottles[requestType] then
 		local throttleInfo = service._forcedThrottles[requestType]
 		if throttleInfo.endTime > os.time() then
-			error("MemoryStore request is currently throttled", 0)
+			error('MemoryStore request is currently throttled', 0)
 		else
 			service._forcedThrottles[requestType] = nil
 		end
@@ -95,20 +95,20 @@ local function doRateLimitAndQueue(service: any, requestType: string)
 		error(errorMessage, 0)
 	end
 
-	if typeof(fn) == "function" then
+	if typeof(fn) == 'function' then
 		fn()
 	end
 end
 
 local function enforceKeyLimits(key: string)
-	if typeof(key) ~= "string" then
-		error("InvalidRequest: key must be a string", 0)
+	if typeof(key) ~= 'string' then
+		error('InvalidRequest: key must be a string', 0)
 	end
 	if #key == 0 then
-		error("InvalidRequest: key cannot be empty", 0)
+		error('InvalidRequest: key cannot be empty', 0)
 	end
 	if #key > MAX_KEY_LENGTH then
-		error("InvalidRequest: key length exceeds limit", 0)
+		error('InvalidRequest: key length exceeds limit', 0)
 	end
 end
 
@@ -118,27 +118,27 @@ local function enforceValueLimits(value: any)
 	end
 
 	local success, encoded = pcall(function()
-		return game:GetService("HttpService"):JSONEncode(value)
+		return game:GetService('HttpService'):JSONEncode(value)
 	end)
 
 	if not success then
-		error("InvalidRequest: value cannot be encoded to JSON", 0)
+		error('InvalidRequest: value cannot be encoded to JSON', 0)
 	end
 
 	if #encoded > MAX_VALUE_SIZE then
-		error("ItemValueSizeTooLarge", 0)
+		error('ItemValueSizeTooLarge', 0)
 	end
 end
 
 local function enforceExpirationLimits(expiration: number)
-	if typeof(expiration) ~= "number" then
-		error("InvalidRequest: expiration must be a number", 0)
+	if typeof(expiration) ~= 'number' then
+		error('InvalidRequest: expiration must be a number', 0)
 	end
 	if expiration < 0 then
-		error("InvalidRequest: expiration must be >= 0", 0)
+		error('InvalidRequest: expiration must be >= 0', 0)
 	end
 	if expiration > MAX_EXPIRATION then
-		error("InvalidRequest: expiration exceeds maximum", 0)
+		error('InvalidRequest: expiration exceeds maximum', 0)
 	end
 end
 
@@ -167,7 +167,7 @@ local MockHashMap = {}
 function MockHashMap:GetAsync(key: string): any?
 	enforceKeyLimits(key)
 
-	doRateLimitAndQueue(self.service, "GetAsync")
+	doRateLimitAndQueue(self.service, 'GetAsync')
 
 	local scopedData = getScopedData(self)
 	local entry = scopedData[key]
@@ -186,7 +186,7 @@ function MockHashMap:SetAsync(key: string, value: any, expiration: number): bool
 	enforceValueLimits(value)
 	enforceExpirationLimits(expiration)
 
-	doRateLimitAndQueue(self.service, "SetAsync")
+	doRateLimitAndQueue(self.service, 'SetAsync')
 
 	local scopedData = getScopedData(self)
 	local serialized = HttpService:JSONEncode(value)
@@ -206,7 +206,7 @@ function MockHashMap:UpdateAsync(key: string, transformFunction: (any?) -> any?,
 	enforceKeyLimits(key)
 	enforceExpirationLimits(expiration)
 
-	doRateLimitAndQueue(self.service, "UpdateAsync")
+	doRateLimitAndQueue(self.service, 'UpdateAsync')
 
 	local scopedData = getScopedData(self)
 	local retries = 0
@@ -221,7 +221,7 @@ function MockHashMap:UpdateAsync(key: string, transformFunction: (any?) -> any?,
 
 		local success, newValue = pcall(transformFunction, currentValue)
 		if not success then
-			error("TransformCallbackFailed", 0)
+			error('TransformCallbackFailed', 0)
 		end
 
 		if newValue == nil then
@@ -234,7 +234,7 @@ function MockHashMap:UpdateAsync(key: string, transformFunction: (any?) -> any?,
 		if entry and not isExpired(entry) and not Tables.equalsDeep(entry.value, currentValue) then
 			retries += 1
 			if retries >= MAX_UPDATE_RETRIES then
-				error("DataUpdateConflict", 0)
+				error('DataUpdateConflict', 0)
 			end
 			continue
 		end
@@ -247,13 +247,13 @@ function MockHashMap:UpdateAsync(key: string, transformFunction: (any?) -> any?,
 		return newValue
 	end
 
-	error("UpdateConflict: Exceeded max number of retries", 0)
+	error('UpdateConflict: Exceeded max number of retries', 0)
 end
 
 function MockHashMap:RemoveAsync(key: string)
 	enforceKeyLimits(key)
 
-	doRateLimitAndQueue(self.service, "RemoveAsync")
+	doRateLimitAndQueue(self.service, 'RemoveAsync')
 
 	local scopedData = getScopedData(self)
 	scopedData[key] = nil

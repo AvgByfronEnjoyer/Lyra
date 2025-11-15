@@ -31,10 +31,10 @@ local INTERNAL_SPACE_RESERVE_BYTES = 10_000
 	.AUTOSAVE_INTERVAL_SECONDS number -- How often (in seconds) the automatic saving mechanism should attempt to save dirty session data.
 ]=]
 local Constants = {
-	RECORD_SCOPE = "lyra/records",
-	TX_SCOPE = "lyra/tx",
-	SHARD_SCOPE = "lyra/shards",
-	LOCK_SCOPE = "lyra/locks",
+	RECORD_SCOPE = 'lyra/records',
+	TX_SCOPE = 'lyra/tx',
+	SHARD_SCOPE = 'lyra/shards',
+	LOCK_SCOPE = 'lyra/locks',
 
 	MAX_CHUNK_SIZE = 4_000_000 - INTERNAL_SPACE_RESERVE_BYTES,
 

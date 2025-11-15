@@ -6,7 +6,7 @@
 ]=]
 
 local Log = require(script.Parent.Log)
-local t = require(script.Parent.Parent.t)
+local t = require(script.Parent.roblox_packages.t)
 
 --[=[
 	Represents a single operation within a JSON Patch array.
@@ -19,9 +19,9 @@ local t = require(script.Parent.Parent.t)
 	.value any? -- The value to add or replace (used for "add" and "replace"). Optional for "remove".
 ]=]
 export type PatchOperation =
-	{ op: "add", path: string, value: any }
-	| { op: "replace", path: string, value: any }
-	| { op: "remove", path: string }
+	{ op: 'add', path: string, value: any }
+	| { op: 'replace', path: string, value: any }
+	| { op: 'remove', path: string }
 
 --[=[
 	An array of PatchOperation objects representing the changes made during a transaction.
@@ -118,6 +118,7 @@ export type MigrationStep = {
 	.changedCallbacks { (key: string, newData: T, oldData: T?) -> () } -- A list of functions to call whenever data for a key is successfully changed. Provides the key, the new data state, and the previous data state (if available). Initialized as empty.
 	.logger Logger -- A `Logger` instance used for internal logging within the store and its components.
 	.onLockLost ((key: string) -> ())? -- An optional callback function triggered if the distributed lock for a key is lost unexpectedly (e.g., due to expiration or external interference).
+	.useDSSLocking boolean -- Whether to use DataStoreService for distributed locking instead of MemoryStoreService.
 
 	.recordStore DataStore -- The DataStore used to store `DataStoreRecord` objects.
 	.shardStore DataStore -- The DataStore used to store the actual data shards for large files.
@@ -138,11 +139,12 @@ export type StoreContext<T> = {
 	changedCallbacks: { (key: string, newData: T, oldData: T?) -> () },
 	logger: Log.Logger,
 	onLockLost: ((key: string) -> ())?,
+	useDSSLocking: boolean,
 
 	recordStore: DataStore,
 	shardStore: DataStore,
 	txStore: DataStore,
-	lockHashMap: MemoryStoreHashMap,
+	lockHashMap: DataStore | MemoryStoreHashMap,
 }
 
 -- Validation check for TxInfo structure using 't' library.

@@ -45,10 +45,10 @@
 	```
 ]=]
 
-local DataStoreService = game:GetService("DataStoreService")
-local HttpService = game:GetService("HttpService")
-local MemoryStoreService = game:GetService("MemoryStoreService")
-local RunService = game:GetService("RunService")
+local DataStoreService = game:GetService('DataStoreService')
+local HttpService = game:GetService('HttpService')
+local MemoryStoreService = game:GetService('MemoryStoreService')
+local RunService = game:GetService('RunService')
 
 local Constants = require(script.Parent.Constants)
 local Files = require(script.Parent.Files)
@@ -65,7 +65,7 @@ local Tables = require(script.Parent.Tables)
 local Types = require(script.Parent.Types)
 local dataStoreRetry = require(script.Parent.dataStoreRetry)
 local noYield = require(script.Parent.noYield)
-local t = require(script.Parent.Parent.t)
+local t = require(script.Parent.roblox_packages.t)
 
 --[=[
 	Configuration options for creating a new Store instance using `createStore`.
@@ -105,6 +105,7 @@ export type StoreConfig<T> = {
 	changedCallbacks: { (key: string, newData: T, oldData: T?) -> () }?,
 	logCallback: ((logMessage: Log.LogMessage) -> ())?,
 	onLockLost: ((key: string) -> ())?,
+	useDSSLocking: boolean?,
 	useMock: boolean?,
 }
 local storeConfigCheck = t.strictInterface({
@@ -121,6 +122,7 @@ local storeConfigCheck = t.strictInterface({
 	changedCallbacks = t.optional(t.array(t.callback)),
 	logCallback = t.optional(t.callback),
 	onLockLost = t.optional(t.callback),
+	useDSSLocking = t.optional(t.boolean),
 	useMock = t.optional(t.boolean),
 })
 
@@ -218,39 +220,39 @@ local function createStore<T>(config: StoreConfig<T>): Store<T>
 	assert(storeConfigCheck(config))
 
 	local logger = Log.createLogger(config.logCallback or function() end, {
-		lib = "lyra",
+		lib = 'lyra',
 		store = config.name,
 	})
 
-	logger:log("debug", `creating store`)
+	logger:log('debug', `creating store`)
 
 	-- Determine which DataStoreService implementation to use (real, mock, or custom).
 	local dataStoreService = config.dataStoreService
 	if dataStoreService == nil then
 		if config.useMock then
-			assert(RunService:IsStudio(), "useMock can only be true in Studio")
-			logger:log("info", `using mock DataStoreService`)
+			assert(RunService:IsStudio(), 'useMock can only be true in Studio')
+			logger:log('info', `using mock DataStoreService`)
 			dataStoreService = (MockDataStoreService.new() :: any) :: DataStoreService
 		else
-			logger:log("trace", `using real DataStoreService`)
+			logger:log('trace', `using real DataStoreService`)
 			dataStoreService = DataStoreService
 		end
 	end
-	assert(dataStoreService, "luau") -- Forcefully narrowing type due to old type solver limitations
+	assert(dataStoreService, 'luau') -- Forcefully narrowing type due to old type solver limitations
 
 	-- Determine which MemoryStoreService implementation to use (real, mock, or custom).
 	local memoryStoreService = config.memoryStoreService
 	if memoryStoreService == nil then
 		if config.useMock then
-			assert(RunService:IsStudio(), "useMock can only be true in Studio")
-			logger:log("info", `using mock MemoryStoreService`)
+			assert(RunService:IsStudio(), 'useMock can only be true in Studio')
+			logger:log('info', `using mock MemoryStoreService`)
 			memoryStoreService = (MockMemoryStoreService.new() :: any) :: MemoryStoreService
 		else
-			logger:log("trace", `using real MemoryStoreService`)
+			logger:log('trace', `using real MemoryStoreService`)
 			memoryStoreService = MemoryStoreService
 		end
 	end
-	assert(memoryStoreService, "luau") -- Forcefully narrowing type due to old type solver limitations
+	assert(memoryStoreService, 'luau') -- Forcefully narrowing type due to old type solver limitations
 
 	local migrationSteps = config.migrationSteps or {}
 
@@ -269,12 +271,15 @@ local function createStore<T>(config: StoreConfig<T>): Store<T>
 		changedCallbacks = config.changedCallbacks or {},
 		logger = logger,
 		onLockLost = config.onLockLost,
+		useDSSLocking = config.useDSSLocking == true,
 
 		-- Get specific DataStore/MemoryStore instances using derived names/scopes.
 		recordStore = dataStoreService:GetDataStore(`{Constants.RECORD_SCOPE}/{config.name}`),
 		shardStore = dataStoreService:GetDataStore(`{Constants.SHARD_SCOPE}/{config.name}`),
 		txStore = dataStoreService:GetDataStore(`{Constants.TX_SCOPE}/{config.name}`),
-		lockHashMap = memoryStoreService:GetHashMap(`{Constants.LOCK_SCOPE}/{config.name}`),
+		lockHashMap = if config.useDSSLocking
+			then dataStoreService:GetDataStore(`{Constants.LOCK_SCOPE}/{config.name}`)
+			else memoryStoreService:GetHashMap(`{Constants.LOCK_SCOPE}/{config.name}`),
 	}
 
 	-- Validate that the provided template data conforms to the schema.
@@ -291,7 +296,7 @@ local function createStore<T>(config: StoreConfig<T>): Store<T>
 		_unloadPromises = {},
 	}, Store)
 
-	logger:log("trace", `created store`)
+	logger:log('trace', `created store`)
 	return self
 end
 
@@ -352,34 +357,34 @@ function Store:load(key: string, userIds: { number }?): Promise.Promise
 	assert(t.string(key))
 	assert(t.optional(t.array(t.number))(userIds))
 
-	local logger = self._ctx.logger:extend({ method = "load", key = key })
-	logger:log("trace", "attempting to load key")
+	local logger = self._ctx.logger:extend({ method = 'load', key = key })
+	logger:log('trace', 'attempting to load key')
 
 	-- Prevent operations if the store is closed.
 	if self._closed then
-		logger:log("warn", "attempted to load key while store is closed")
-		return Promise.reject("Store is closed")
+		logger:log('warn', 'attempted to load key while store is closed')
+		return Promise.reject('Store is closed')
 	end
 
 	-- If a session exists and isn't currently unloading, it's already loaded.
 	if self._sessions[key] and not self._unloadPromises[key] then
-		logger:log("trace", "key is already loaded")
+		logger:log('trace', 'key is already loaded')
 		return Promise.resolve()
 	end
 
 	-- Prevent concurrent load attempts for the same key.
 	if self._loadPromises[key] then
-		logger:log("trace", "key is currently being loaded")
+		logger:log('trace', 'key is currently being loaded')
 		-- We reject instead of returning the existing promise because load
 		-- being called more than once on the same key indicates a code smell or bug.
-		return Promise.reject("Load already in progress")
+		return Promise.reject('Load already in progress')
 	end
 
 	-- If an unload is in progress, wait for it to finish before starting the load.
 	local waitForUnload = Promise.try(function()
 		local unloadPromise = self._unloadPromises[key]
 		if unloadPromise then
-			logger:log("trace", "waiting for unload to complete")
+			logger:log('trace', 'waiting for unload to complete')
 			unloadPromise:await()
 		end
 	end)
@@ -393,13 +398,13 @@ function Store:load(key: string, userIds: { number }?): Promise.Promise
 	local loadPromise = waitForUnload:andThenCall(Session.load, sessionLoadParams):andThen(function(session)
 		-- Check if the store was closed *while* this load was in progress.
 		if self._closed then
-			logger:log("warn", "store closed before key loaded, unloading immediately")
+			logger:log('warn', 'store closed before key loaded, unloading immediately')
 			-- If closed, immediately start unloading the session that was just loaded.
 			self._unloadPromises[key] = session:unload():finally(function()
-				logger:log("trace", "key unloaded after store closed during load")
+				logger:log('trace', 'key unloaded after store closed during load')
 				self._unloadPromises[key] = nil
 			end)
-			return Promise.reject("Store closed before key loaded")
+			return Promise.reject('Store closed before key loaded')
 		end
 
 		-- Session was loaded successfully; let's store it, start autosaving,
@@ -410,7 +415,7 @@ function Store:load(key: string, userIds: { number }?): Promise.Promise
 		session:startAutosaving()
 
 		session.lockHandle.onLockLost(function()
-			logger:log("warn", "lock lost for key, removing session")
+			logger:log('warn', 'lock lost for key, removing session')
 			if self._ctx.onLockLost then
 				-- Use pcall as user callback could error.
 				pcall(self._ctx.onLockLost, key)
@@ -418,7 +423,7 @@ function Store:load(key: string, userIds: { number }?): Promise.Promise
 			-- Remove the session as it's no longer valid without the lock.
 			self._sessions[key] = nil
 		end)
-		logger:log("debug", "key loaded successfully")
+		logger:log('debug', 'key loaded successfully')
 	end)
 
 	-- Store the load promise to handle concurrent calls.
@@ -441,8 +446,8 @@ function Store:load(key: string, userIds: { number }?): Promise.Promise
 	-- Final check for cancellation after the main load logic.
 	return loadPromise:finally(function(status)
 		if status == (Promise :: any).Status.Cancelled then
-			logger:log("trace", "load was cancelled")
-			return Promise.reject("Load was cancelled")
+			logger:log('trace', 'load was cancelled')
+			return Promise.reject('Load was cancelled')
 		end
 	end)
 end
@@ -475,18 +480,18 @@ end
 function Store:unload(key: string): Promise.Promise
 	assert(t.string(key))
 
-	local logger = self._ctx.logger:extend({ method = "unload", key = key })
-	logger:log("trace", "attempting to unload key")
+	local logger = self._ctx.logger:extend({ method = 'unload', key = key })
+	logger:log('trace', 'attempting to unload key')
 
 	-- Prevent operations if the store is closed.
 	if self._closed then
-		logger:log("warn", "attempted to unload key while store is closed")
-		return Promise.reject("Store is closed")
+		logger:log('warn', 'attempted to unload key while store is closed')
+		return Promise.reject('Store is closed')
 	end
 
 	-- If a load is in progress, cancel it instead of unloading.
 	if self._loadPromises[key] then
-		logger:log("trace", "key is being loaded, cancelling load instead of unloading")
+		logger:log('trace', 'key is being loaded, cancelling load instead of unloading')
 		self._loadPromises[key]:cancel()
 		-- Resolve immediately as the load cancellation handles cleanup.
 		return Promise.resolve()
@@ -494,22 +499,22 @@ function Store:unload(key: string): Promise.Promise
 
 	-- If an unload is already in progress, return the existing promise.
 	if self._unloadPromises[key] then
-		logger:log("trace", "key is already being unloaded")
+		logger:log('trace', 'key is already being unloaded')
 		return self._unloadPromises[key]
 	end
 
 	-- If there's no active session, there's nothing to unload.
 	local session = self._sessions[key]
 	if not session then
-		logger:log("warn", "key not loaded, nothing to unload")
+		logger:log('warn', 'key not loaded, nothing to unload')
 		return Promise.resolve()
 	end
 
-	logger:log("trace", "unloading key")
+	logger:log('trace', 'unloading key')
 	-- Store the unload promise to handle concurrent calls.
 	self._unloadPromises[key] = session:unload():finally(function()
 		-- Clean up regardless of unload success or failure.
-		logger:log("trace", "key unload finished, cleaning up state")
+		logger:log('trace', 'key unload finished, cleaning up state')
 		self._sessions[key] = nil
 		self._unloadPromises[key] = nil
 	end)
@@ -541,26 +546,26 @@ end
 	@return Promise -- Resolves with the return value of the callback, or rejects if the session cannot be accessed (e.g., not loaded, store closed, load cancelled).
 ]=]
 function Store:_withSession(key: string, callback: (session: Session.Session<any>) -> any): Promise.Promise
-	local logger = self._ctx.logger:extend({ method = "_withSession", key = key })
+	local logger = self._ctx.logger:extend({ method = '_withSession', key = key })
 
 	return Promise.new(function(resolve, reject)
 		-- Check if store is closed first.
 		if self._closed then
-			logger:log("warn", "attempted to use key while store is closed")
-			return reject("Store is closed")
+			logger:log('warn', 'attempted to use key while store is closed')
+			return reject('Store is closed')
 		end
 
 		-- If a load is in progress, wait for it.
 		local loadPromise = self._loadPromises[key]
 		if loadPromise then
-			logger:log("trace", "key being loaded, waiting for load promise")
+			logger:log('trace', 'key being loaded, waiting for load promise')
 			local resolved, err = loadPromise:await()
 			if not resolved then
 				if loadPromise:getStatus() == Promise.Status.Cancelled then
-					logger:log("trace", "load was cancelled while waiting")
-					return reject("Load was cancelled")
+					logger:log('trace', 'load was cancelled while waiting')
+					return reject('Load was cancelled')
 				else
-					logger:log("warn", "load failed while waiting")
+					logger:log('warn', 'load failed while waiting')
 					return reject(err)
 				end
 			end
@@ -569,14 +574,14 @@ function Store:_withSession(key: string, callback: (session: Session.Session<any
 
 		-- Check if an unload is in progress.
 		if self._unloadPromises[key] then
-			logger:log("warn", "key is being unloaded")
+			logger:log('warn', 'key is being unloaded')
 		end
 
 		-- Get the session; it should exist now if load succeeded or was already loaded.
 		local session = self._sessions[key]
 		if not session then
-			logger:log("warn", "key not loaded")
-			return reject("Key not loaded")
+			logger:log('warn', 'key not loaded')
+			return reject('Key not loaded')
 		end
 
 		-- Session exists and is ready, execute the callback.
@@ -769,29 +774,29 @@ local function txInternal<T>(
 ): Promise.TPromise<boolean>
 	-- Generate a unique ID for this transaction attempt.
 	local txId = HttpService:GenerateGUID(false)
-	local logger = self._ctx.logger:extend({ method = "tx", keys = keys, txId = txId, immutable = immutable })
+	local logger = self._ctx.logger:extend({ method = 'tx', keys = keys, txId = txId, immutable = immutable })
 
-	logger:log("trace", "starting transaction")
+	logger:log('trace', 'starting transaction')
 	if self._closed then
-		logger:log("warn", "attempted to start transaction while store is closed")
-		return Promise.reject("Store is closed")
+		logger:log('warn', 'attempted to start transaction while store is closed')
+		return Promise.reject('Store is closed')
 	end
 
 	-- Pre-checks: Ensure all keys are loaded and not already involved in a transaction or closed.
 	for _, key in keys do
 		local session = self._sessions[key]
 		if not session then
-			logger:log("error", `key not loaded: {key}`)
+			logger:log('error', `key not loaded: {key}`)
 			return Promise.reject(`Key not loaded: {key}`)
 		end
 		-- Check if the session is already locked by another transaction.
 		if session.txLockPromise then
-			logger:log("error", `key is already locked by another transaction: {key}`)
+			logger:log('error', `key is already locked by another transaction: {key}`)
 			return Promise.reject(`Key is already locked by another transaction: {key}`)
 		end
 		-- Check if the session was closed (e.g., due to lock loss).
 		if session.closed then
-			logger:log("error", `key is closed: {key}`)
+			logger:log('error', `key is closed: {key}`)
 			return Promise.reject(`Key is closed: {key}`)
 		end
 	end
@@ -816,7 +821,7 @@ local function txInternal<T>(
 			local session = self._sessions[key]
 			session.txLockPromise = txLockPromise
 		end
-		logger:log("trace", "set txLockPromise on Sessions")
+		logger:log('trace', 'set txLockPromise on Sessions')
 
 		-- Execute the provided function and ensure the lock is cleared afterwards.
 		return Promise.try(fn):finally(function()
@@ -828,17 +833,17 @@ local function txInternal<T>(
 					session.txLockPromise = nil
 				end
 			end
-			logger:log("trace", "cleared txLockPromise on Sessions")
+			logger:log('trace', 'cleared txLockPromise on Sessions')
 			-- Resolve the lock promise to signal completion to any waiting operations.
 			txLockResolve()
 		end)
 	end
 
-	logger:log("trace", `acquiring PromiseQueue lock on keys`)
+	logger:log('trace', `acquiring PromiseQueue lock on keys`)
 	-- Use multiQueueAdd to ensure the core transaction logic runs only when
 	-- all session queues are ready (atomicity across queues).
 	return PromiseQueue.multiQueueAdd(queues, function()
-		logger:log("trace", `acquired PromiseQueue lock on keys`)
+		logger:log('trace', `acquired PromiseQueue lock on keys`)
 
 		-- Wrap the core transaction logic with the session tx lock mechanism.
 		return withTxLock(function()
@@ -867,26 +872,26 @@ local function txInternal<T>(
 			-- Use noYield to prevent yielding within the transform function.
 			local transformOk, result = pcall(noYield, transformFunction, nextState :: any)
 			if not transformOk then
-				logger:log("error", "tx transformFunction failed", { error = result })
+				logger:log('error', 'tx transformFunction failed', { error = result })
 				return Promise.reject(`Store:tx transformFunction failed: {result}`)
 			end
 
 			if immutable == false then
 				-- If mutable, the transform function should return a boolean.
 				-- This indicates whether the changes should be committed.
-				assert(typeof(result) == "boolean", "Mutable transaction transform function must return a boolean")
+				assert(typeof(result) == 'boolean', 'Mutable transaction transform function must return a boolean')
 			else
 				-- If immutable, the transform function should return a new state or false.
 				-- This indicates the new state to commit or that the transaction should be aborted.
 				assert(
-					typeof(result) == "table" or result == false,
-					"Immutable transaction transform function must return a table or false"
+					typeof(result) == 'table' or result == false,
+					'Immutable transaction transform function must return a table or false'
 				)
 			end
 
 			-- If transform returned false, abort the transaction.
 			if result == false then
-				logger:log("trace", "tx transformFunction returned false, aborting")
+				logger:log('trace', 'tx transformFunction returned false, aborting')
 				return Promise.resolve(false)
 			end
 
@@ -914,15 +919,15 @@ local function txInternal<T>(
 				end
 			end
 			if didKeysChange then
-				logger:log("error", "keys changed in transaction")
-				return Promise.reject("Keys changed in transaction")
+				logger:log('error', 'keys changed in transaction')
+				return Promise.reject('Keys changed in transaction')
 			end
 
 			-- 4. Validate the resulting state against schemas.
 			for _, key in keys do
 				local schemaOk, err = self._ctx.schema(nextState[key] :: any)
 				if not schemaOk then
-					logger:log("error", `schema validation for key {key} failed: {err}`)
+					logger:log('error', `schema validation for key {key} failed: {err}`)
 					return Promise.reject(`Store:tx schema validation failed for key '{key}': {err}`)
 				end
 			end
@@ -937,11 +942,11 @@ local function txInternal<T>(
 
 			-- Handle cases where no keys or only one key changed.
 			if #changedKeys == 0 then
-				logger:log("trace", "tx had no mutations, skipping update")
+				logger:log('trace', 'tx had no mutations, skipping update')
 				return Promise.resolve(true) -- No changes, resolve successfully.
 			elseif #changedKeys == 1 then
 				-- If only one key changed, treat it as a standard single-key update for efficiency.
-				logger:log("trace", `tx only changed one key ('{changedKeys[1]}'), treating as Session:update`)
+				logger:log('trace', `tx only changed one key ('{changedKeys[1]}'), treating as Session:update`)
 
 				local key = changedKeys[1]
 				local nextData = nextState[key]
@@ -959,7 +964,7 @@ local function txInternal<T>(
 			end
 
 			-- 6. Multi-key change: Proceed with the two-phase commit.
-			logger:log("trace", "tx changed multiple keys, beginning multi-key update")
+			logger:log('trace', 'tx changed multiple keys, beginning multi-key update')
 			local patches = {}
 			for key, newData in nextState do
 				-- Generate JSON patches representing the changes for each key.
@@ -970,13 +975,13 @@ local function txInternal<T>(
 			local prepareTxPromise = dataStoreRetry(function()
 				return self._ctx.txStore:SetAsync(txId, false)
 			end):catch(function(err)
-				logger:log("error", "failed to prepare txId", { error = err })
-				return Promise.reject("Failed to prepare tx") -- Abort if status marker fails.
+				logger:log('error', 'failed to prepare txId', { error = err })
+				return Promise.reject('Failed to prepare tx') -- Abort if status marker fails.
 			end)
 
 			-- Phase 1b: Write Records - After preparing, write the new records with TxInfo.
 			local keyWritePromises = prepareTxPromise:andThen(function()
-				logger:log("trace", "tx status prepared, writing records with TxInfo")
+				logger:log('trace', 'tx status prepared, writing records with TxInfo')
 				-- Create promises for writing each key's record.
 				return Promise.all(Tables.map(keys, function(key)
 					local txInfo: Types.TxInfo = {
@@ -990,7 +995,7 @@ local function txInternal<T>(
 
 			-- Function to handle reverting the transaction if commit fails.
 			local function revert(err)
-				logger:log("error", "multi-key update or tx commit failed, reverting", { error = err })
+				logger:log('error', 'multi-key update or tx commit failed, reverting', { error = err })
 
 				-- Attempt to rewrite all records *without* the TxInfo.
 				local cleanupPromises = Tables.map(keys, function(key)
@@ -1005,13 +1010,13 @@ local function txInternal<T>(
 				-- tx status means the tx was committed successfully.
 				return Promise.all(cleanupPromises)
 					:andThen(function()
-						logger:log("trace", "multi-key update reverted, cleaning up tx status")
+						logger:log('trace', 'multi-key update reverted, cleaning up tx status')
 						return dataStoreRetry(function()
 							return self._ctx.txStore:RemoveAsync(txId)
 						end)
 					end)
 					:finally(function()
-						logger:log("trace", "tx status cleanup attempted after failure")
+						logger:log('trace', 'tx status cleanup attempted after failure')
 						-- Reject with the original error that triggered the revert.
 						return Promise.reject(err)
 					end)
@@ -1021,8 +1026,8 @@ local function txInternal<T>(
 			local commitPromise = keyWritePromises
 				:andThen(function()
 					logger:log(
-						"trace",
-						"multi-key records written successfully, committing transaction by removing tx status"
+						'trace',
+						'multi-key records written successfully, committing transaction by removing tx status'
 					)
 					return dataStoreRetry(function()
 						return self._ctx.txStore:RemoveAsync(txId)
@@ -1034,7 +1039,7 @@ local function txInternal<T>(
 			return commitPromise
 				:andThen(function()
 					-- Runs only if commit succeeded (revert path rejects).
-					logger:log("debug", "transaction committed successfully")
+					logger:log('debug', 'transaction committed successfully')
 
 					-- Update the in-memory session state to reflect the committed changes.
 					for _, key in keys do
@@ -1057,7 +1062,7 @@ local function txInternal<T>(
 				end)
 				:finally(function()
 					-- Runs after commit or revert finishes.
-					logger:log("trace", "tx finished")
+					logger:log('trace', 'tx finished')
 				end)
 		end) -- End of withTxLock
 	end) -- End of multiQueueAdd
@@ -1206,12 +1211,12 @@ end
 	@return Promise -- Resolves when all sessions have attempted to unload, or rejects if any session encountered an error during its unload process (errors are aggregated).
 ]=]
 function Store:close(): Promise.Promise
-	local logger = self._ctx.logger:extend({ method = "close" })
-	logger:log("trace", "closing store")
+	local logger = self._ctx.logger:extend({ method = 'close' })
+	logger:log('trace', 'closing store')
 
 	-- Cancel any loads that are still in progress.
 	for key, loadPromise in self._loadPromises do
-		logger:log("trace", "cancelling in-progress load", { key = key });
+		logger:log('trace', 'cancelling in-progress load', { key = key });
 		(loadPromise :: any):cancel()
 	end
 
@@ -1222,14 +1227,14 @@ function Store:close(): Promise.Promise
 	local unloadPromises = {}
 	for key, session in self._sessions do
 		if self._unloadPromises[key] then
-			logger:log("trace", "key already being unloaded", { key = key })
+			logger:log('trace', 'key already being unloaded', { key = key })
 			table.insert(unloadPromises, self._unloadPromises[key])
 		else
-			logger:log("trace", "unloading key", { key = key })
+			logger:log('trace', 'unloading key', { key = key })
 			table.insert(
 				unloadPromises,
 				self:unload(key):catch(function(err)
-					logger:log("error", "error unloading key during close", { key = key, error = err })
+					logger:log('error', 'error unloading key during close', { key = key, error = err })
 					table.insert(rejections, { key = key, error = err })
 					-- Don't re-throw; let Promise.allSettled handle aggregation.
 				end)
@@ -1239,10 +1244,10 @@ function Store:close(): Promise.Promise
 
 	-- Mark the store as closed immediately. Further operations will be rejected.
 	self._closed = true
-	logger:log("trace", "store marked as closed")
+	logger:log('trace', 'store marked as closed')
 
 	return Promise.allSettled(unloadPromises):andThen(function()
-		logger:log("debug", "store closed")
+		logger:log('debug', 'store closed')
 		-- If any individual unload failed, reject the main close promise with the errors.
 		if #rejections > 0 then
 			return Promise.reject(rejections)
@@ -1286,7 +1291,7 @@ function Store:peek<T>(key: string): Promise.TPromise<T?>
 			if record == nil then
 				return nil
 			end
-			assert(record, "luau") -- Forcefully narrowing type due to old type solver limitations
+			assert(record, 'luau') -- Forcefully narrowing type due to old type solver limitations
 
 			local file = record.file
 			if file then
@@ -1304,7 +1309,7 @@ function Store:peek<T>(key: string): Promise.TPromise<T?>
 			if txInfo == nil then
 				return nil
 			end
-			assert(txInfo, "luau") -- Forcefully narrowing type due to old type solver limitations
+			assert(txInfo, 'luau') -- Forcefully narrowing type due to old type solver limitations
 
 			local readTxParams = {
 				store = self._ctx.txStore,
@@ -1414,7 +1419,7 @@ function Store:readVersion<T>(key: string, version: string): Promise.TPromise<(T
 		:andThen(function(record: Types.DataStoreRecord?, keyInfo: DataStoreKeyInfo?)
 			-- Ensure both the record content and key info were returned.
 			if not record or not keyInfo then
-				return Promise.reject("Record not found for the specified version")
+				return Promise.reject('Record not found for the specified version')
 			end
 
 			-- 2. Read the data file associated with that version record.

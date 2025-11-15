@@ -1,4 +1,4 @@
-local HttpService = game:GetService("HttpService")
+local HttpService = game:GetService('HttpService')
 
 local Tables = require(script.Parent.Tables)
 
@@ -36,15 +36,15 @@ local function shouldSimulateError(service: any, requestType: string): (boolean,
 	end
 
 	if service._errorRates[requestType] and math.random() < service._errorRates[requestType] then
-		return true, "DataStore request failed due to random error simulation"
+		return true, 'DataStore request failed due to random error simulation'
 	end
 
 	if service._simulateThrottling then
-		return true, "DataStore request was throttled, try again later"
+		return true, 'DataStore request was throttled, try again later'
 	end
 
 	if service._simulateTimeout then
-		return true, "DataStore request timed out"
+		return true, 'DataStore request timed out'
 	end
 
 	return false, nil
@@ -101,11 +101,11 @@ local function validateMetadata(metadata: any)
 		return
 	end
 
-	if typeof(metadata) ~= "table" then
-		error("DataStoreService: Metadata must be a table", 0)
+	if typeof(metadata) ~= 'table' then
+		error('DataStoreService: Metadata must be a table', 0)
 	end
 
-	local serialized = game:GetService("HttpService"):JSONEncode(metadata)
+	local serialized = game:GetService('HttpService'):JSONEncode(metadata)
 	if #serialized > MAX_METADATA_SIZE then
 		error(`DataStoreService: Metadata size exceeds {MAX_METADATA_SIZE} limit`, 0)
 	end
@@ -158,8 +158,8 @@ local function setCachedValue(self: any, key: string, value: any, keyInfo: any)
 end
 
 local function enforceKeyLimits(key: any)
-	if typeof(key) ~= "string" then
-		error("DataStoreService: Key must be a string", 0)
+	if typeof(key) ~= 'string' then
+		error('DataStoreService: Key must be a string', 0)
 	end
 
 	if #key == 0 then
@@ -177,7 +177,7 @@ local function enforceDataLimits(value: any)
 	end
 
 	local success, result = pcall(function()
-		return game:GetService("HttpService"):JSONEncode(value)
+		return game:GetService('HttpService'):JSONEncode(value)
 	end)
 	if not success then
 		error(`DataStoreService: Cannot store {typeof(value)} in DataStore`, 0)
@@ -215,7 +215,7 @@ local function doRateLimitAndQueue(self: any, requestType: string)
 	if self._service._forcedThrottles[requestType] then
 		local throttleInfo = self._service._forcedThrottles[requestType]
 		if throttleInfo.endTime > os.time() then
-			error("DataStoreService: Request is currently throttled", 0)
+			error('DataStoreService: Request is currently throttled', 0)
 		else
 			self._service._forcedThrottles[requestType] = nil
 		end
@@ -230,7 +230,7 @@ local function doRateLimitAndQueue(self: any, requestType: string)
 		error(errorMessage, 0)
 	end
 
-	if typeof(fn) == "function" then
+	if typeof(fn) == 'function' then
 		fn()
 	end
 
@@ -251,7 +251,7 @@ function MockDataStore:SetAsync(key, value, userIds, options)
 		validateMetadata(options:GetMetadata())
 	end
 
-	doRateLimitAndQueue(self, "SetAsync")
+	doRateLimitAndQueue(self, 'SetAsync')
 
 	local scopedData = getScopedData(self)
 	local versions = getVersionsForKey(self, key)
@@ -290,7 +290,7 @@ function MockDataStore:GetAsync(key, options)
 		end
 	end
 
-	doRateLimitAndQueue(self, "GetAsync")
+	doRateLimitAndQueue(self, 'GetAsync')
 
 	local scopedData = getScopedData(self)
 	local data = scopedData[key]
@@ -306,7 +306,7 @@ end
 function MockDataStore:UpdateAsync(key, transformFunction)
 	enforceKeyLimits(key)
 
-	doRateLimitAndQueue(self, "UpdateAsync")
+	doRateLimitAndQueue(self, 'UpdateAsync')
 
 	while true do
 		local scopedData = getScopedData(self)
@@ -364,7 +364,7 @@ end
 function MockDataStore:RemoveAsync(key)
 	enforceKeyLimits(key)
 
-	doRateLimitAndQueue(self, "RemoveAsync")
+	doRateLimitAndQueue(self, 'RemoveAsync')
 
 	local scopedData = getScopedData(self)
 	local data = scopedData[key]
@@ -386,7 +386,7 @@ end
 function MockDataStore:GetVersionAsync(key, version)
 	enforceKeyLimits(key)
 
-	doRateLimitAndQueue(self, "GetVersion")
+	doRateLimitAndQueue(self, 'GetVersion')
 
 	local versions = getVersionsForKey(self, key)
 	for _, v in versions do
@@ -400,7 +400,7 @@ end
 function MockDataStore:ListVersionsAsync(key, sortDirection, minDate, maxDate)
 	enforceKeyLimits(key)
 
-	doRateLimitAndQueue(self, "GetVersion")
+	doRateLimitAndQueue(self, 'GetVersion')
 
 	local versions = getVersionsForKey(self, key)
 	local results = {}
@@ -435,7 +435,7 @@ end
 local function createMockStore(service: any, datastoreName: string, scope: string?)
 	return setmetatable({
 		datastoreName = datastoreName,
-		scope = scope or "global",
+		scope = scope or 'global',
 		_service = service,
 	}, service.mockStoreMeta)
 end
@@ -477,10 +477,10 @@ local function new()
 	}
 
 	tbl.GetDataStore = function(self, datastoreName: string, scope: string?)
-		local store = self.dataStores[`{datastoreName}{scope or ""}`]
+		local store = self.dataStores[`{datastoreName}{scope or ''}`]
 		if not store then
 			store = createMockStore(self, datastoreName, scope)
-			self.dataStores[`{datastoreName}{scope or ""}`] = store
+			self.dataStores[`{datastoreName}{scope or ''}`] = store
 		end
 		return store
 	end
@@ -489,14 +489,14 @@ local function new()
 		local requestTypeStr = requestType.Name
 
 		local queueKey = requestTypeStr
-		if requestTypeStr == "GetVersionAsync" then
-			queueKey = "GetVersion"
+		if requestTypeStr == 'GetVersionAsync' then
+			queueKey = 'GetVersion'
 		end
-		if requestTypeStr == "GetIncrementAsync" then
-			queueKey = "GetAsync"
+		if requestTypeStr == 'GetIncrementAsync' then
+			queueKey = 'GetAsync'
 		end
-		if requestTypeStr == "SetIncrementAsync" then
-			queueKey = "SetAsync"
+		if requestTypeStr == 'SetIncrementAsync' then
+			queueKey = 'SetAsync'
 		end
 
 		if self._customBudgets[queueKey] then

@@ -1,14 +1,14 @@
 local function copyDeep<T>(t: T): T
-	if typeof(t) ~= "table" then
+	if typeof(t) ~= 'table' then
 		return t
 	end
 
 	local new = table.clone(t :: any)
 
 	for key, value in t :: any do
-		if typeof(value) == "table" then
+		if typeof(value) == 'table' then
 			new[key] = copyDeep(value)
-		elseif typeof(value) == "buffer" then
+		elseif typeof(value) == 'buffer' then
 			local copy = buffer.create(buffer.len(value))
 			new[key] = buffer.copy(value, 0, copy)
 		end
@@ -20,21 +20,21 @@ end
 local function mergeDeep<T>(...: any): T
 	local result = {}
 
-	for tIndex = 1, select("#", ...) do
+	for tIndex = 1, select('#', ...) do
 		local t = select(tIndex, ...)
 
-		if typeof(t) ~= "table" then
+		if typeof(t) ~= 'table' then
 			continue
 		end
 
 		for key, value in t do
-			if typeof(value) == "table" then
-				if result[key] == nil or typeof(result[key]) ~= "table" then
+			if typeof(value) == 'table' then
+				if result[key] == nil or typeof(result[key]) ~= 'table' then
 					result[key] = copyDeep(value)
 				else
 					result[key] = mergeDeep(result[key], value)
 				end
-			elseif typeof(value) == "buffer" then
+			elseif typeof(value) == 'buffer' then
 				local copy = buffer.create(buffer.len(value))
 				result[key] = buffer.copy(value, 0, copy)
 			else
@@ -49,10 +49,10 @@ end
 local function mergeShallow<T>(...: any): T
 	local result = {}
 
-	for tIndex = 1, select("#", ...) do
+	for tIndex = 1, select('#', ...) do
 		local t = select(tIndex, ...)
 
-		if typeof(t) ~= "table" then
+		if typeof(t) ~= 'table' then
 			continue
 		end
 
@@ -79,7 +79,7 @@ local function map<T, U>(array: { T }, mapper: (value: T, index: number, array: 
 end
 
 local function equalsDeep(a: { [any]: any }, b: { [any]: any }): boolean
-	if typeof(a) ~= "table" or typeof(b) ~= "table" then
+	if typeof(a) ~= 'table' or typeof(b) ~= 'table' then
 		return a == b
 	end
 
@@ -99,7 +99,7 @@ local function equalsDeep(a: { [any]: any }, b: { [any]: any }): boolean
 end
 
 local function freezeDeep<T>(t: T): ()
-	if typeof(t) ~= "table" then
+	if typeof(t) ~= 'table' then
 		return
 	end
 
@@ -108,7 +108,7 @@ local function freezeDeep<T>(t: T): ()
 	end
 
 	for _, value in t :: any do
-		if typeof(value) == "table" then
+		if typeof(value) == 'table' then
 			freezeDeep(value)
 		end
 	end
@@ -154,10 +154,10 @@ local function reconcileDeep<T>(target: T, source: T): T
 	for key, sourceValue in source :: any do
 		local targetValue = (target :: any)[key]
 
-		if typeof(sourceValue) == "table" then
+		if typeof(sourceValue) == 'table' then
 			local sourceTableValue = sourceValue :: T
 
-			if typeof(targetValue) == "table" then
+			if typeof(targetValue) == 'table' then
 				local targetTableValue = targetValue :: T
 				-- Recursively reconcile the sub-tables.
 				local reconciledSubTable = reconcileDeep(targetTableValue, sourceTableValue)

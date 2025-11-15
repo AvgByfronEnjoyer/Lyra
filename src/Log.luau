@@ -48,7 +48,7 @@
 	@tag enum
 	@within Log
 ]=]
-export type LogLevel = "fatal" | "error" | "warn" | "info" | "debug" | "trace"
+export type LogLevel = 'fatal' | 'error' | 'warn' | 'info' | 'debug' | 'trace'
 
 --[=[
 	Represents a log message sent to the logger's callback function.
@@ -81,17 +81,17 @@ export type Logger = typeof(setmetatable({} :: LoggerProps, {} :: LoggerImpl))
 
 -- Ordered list of log levels from most severe to least severe.
 local levels = {
-	"fatal",
-	"error",
-	"warn",
-	"info",
-	"debug",
-	"trace",
+	'fatal',
+	'error',
+	'warn',
+	'info',
+	'debug',
+	'trace',
 }
 
 -- The main Log module table, holds global settings like the current log level.
 local Log = {
-	level = "info", -- Default global log level.
+	level = 'info', -- Default global log level.
 }
 
 --[=[

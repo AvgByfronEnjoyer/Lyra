@@ -1,1 +1,6 @@
 std = "roblox"
+
+[rules]
+global_usage = "allow"
+shadowing = "allow"
+bad_string_escape = "allow"
