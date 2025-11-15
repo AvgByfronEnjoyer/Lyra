@@ -13,7 +13,7 @@ lune = "^0.10.2"
 [target]
 environment = "roblox_server"
 build_files = ["src"]
-lib = "init.luau"
+lib = "src/init.luau"
 
 [indices]
 default = "https://github.com/pesde-pkg/index"
