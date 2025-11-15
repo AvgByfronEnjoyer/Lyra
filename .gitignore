@@ -1,7 +1,8 @@
 /luau_packages
 /lune_packages
-/roblox_packages
 
+selene.toml
+stylua.toml
 pesde.lock
 
 sourcemap.json
