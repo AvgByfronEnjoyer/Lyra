@@ -15,6 +15,9 @@ environment = "roblox_server"
 build_files = ["src"]
 lib = "src/init.luau"
 
+[place]
+shared = "game.ReplicatedStorage.Packages"
+
 [indices]
 default = "https://github.com/pesde-pkg/index"
 
