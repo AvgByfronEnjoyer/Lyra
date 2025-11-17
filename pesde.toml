@@ -15,7 +15,8 @@ build_files = ["src"]
 lib = "src/init.luau"
 
 [place]
-shared = "game.ReplicatedStorage.Packages"
+shared = "game.ReplicatedStorage.packages"
+server = "game.ServerStorage.packages"
 
 [indices]
 default = "https://github.com/pesde-pkg/index"
