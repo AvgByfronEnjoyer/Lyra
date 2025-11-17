@@ -10,12 +10,13 @@ includes = [
 pesde = "^0.7.0"
 
 [target]
-environment = "roblox_server"
+environment = "roblox"
 build_files = ["src"]
 lib = "src/init.luau"
 
 [place]
 shared = "game.ReplicatedStorage.Packages"
+server = "game.ServerStorage.Packages"
 
 [indices]
 default = "https://github.com/pesde-pkg/index"
@@ -29,8 +30,6 @@ sourcemap_generator = ".pesde/scripts/sourcemap_generator.luau"
 
 [dev_dependencies]
 scripts = { name = "pesde/scripts_rojo", version = "^0.2.0", target = "lune" }
-selene = { name = "pesde/selene", version = "^0.29.0", target = "lune" }
-stylua = { name = "pesde/stylua", version = "^2.3.0", target = "lune" }
 rojo = { name = "pesde/rojo", version = "^7.5.1", target = "lune" }
 
 [dependencies]

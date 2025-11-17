@@ -1,5 +1,5 @@
 /luau_packages
 /lune_packages
 
-selene.toml
-stylua.toml
+./selene.toml
+./stylua.toml
